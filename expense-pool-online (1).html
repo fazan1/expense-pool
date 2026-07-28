@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Expense Pool Online</title>
+<style>
+  :root{
+    --ink:#14181A; --paper:#F4F5F1; --card:#FFFFFF;
+    --ledger:#0E4D3C; --ledger-2:#0B3E30; --brass:#D9A93F;
+    --red:#B23A2E; --line:#DDE0D8; --mut:#6B7370; --ok:#1E7A4F;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--paper);color:var(--ink);
+       padding-bottom:76px;font-size:15px}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";letter-spacing:.2px}
+
+  /* Header / balance strip */
+  header{background:var(--ledger);color:#EAF2EE;padding:14px 16px 18px;position:relative}
+  header .brand{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#9DBFB2;font-weight:600}
+  header .bal-label{margin-top:10px;font-size:12px;color:#BFD8CD}
+  header .bal{font-size:34px;font-weight:700;color:var(--brass);margin-top:2px}
+  header .bal.neg{color:#F2B8AE}
+  header .sub{display:flex;gap:18px;margin-top:8px;font-size:12px;color:#CFE2D9}
+  header .sub b{display:block;font-size:14px;color:#fff;font-weight:600}
+  .monthbar{display:flex;align-items:center;justify-content:space-between;background:var(--ledger-2);
+            padding:8px 16px;color:#EAF2EE}
+  .monthbar button{background:none;border:1px solid #2C6653;color:#CFE2D9;border-radius:8px;
+                   width:34px;height:30px;font-size:16px}
+  .monthbar .mname{font-weight:600;font-size:14px;letter-spacing:.5px}
+
+  main{padding:14px 14px 8px;max-width:640px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+  .card h3{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mut);margin-bottom:10px;font-weight:700}
+
+  /* Category rows */
+  .catrow{padding:9px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+  .catrow:last-child{border-bottom:none}
+  .catrow .top{display:flex;justify-content:space-between;font-size:14px}
+  .catrow .top .spent{font-weight:600}
+  .catrow .meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-top:2px}
+  .bar{height:5px;background:#ECEEE8;border-radius:3px;margin-top:6px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--ledger);border-radius:3px}
+  .bar i.over{background:var(--red)}
+  .neg-txt{color:var(--red);font-weight:600}
+
+  .prow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px;cursor:pointer}
+  .prow:last-child{border-bottom:none}
+  .prow b{font-weight:600}
+
+  /* Insights */
+  .insight{display:flex;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13.5px;line-height:1.45;align-items:flex-start}
+  .insight:last-child{border-bottom:none}
+  .insight .dot{flex:0 0 8px;height:8px;border-radius:50%;margin-top:5px;background:var(--mut)}
+  .insight.warn .dot{background:var(--red)}
+  .insight.good .dot{background:var(--ok)}
+  .insight b{font-weight:700}
+
+  /* Lists */
+  .entry{display:flex;gap:10px;padding:11px 0;border-bottom:1px dashed var(--line);align-items:center}
+  .entry:last-child{border-bottom:none}
+  .entry .mid{flex:1;min-width:0}
+  .entry .desc{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .entry .tag{font-size:11.5px;color:var(--mut);margin-top:2px}
+  .entry .amt{font-weight:700;font-size:14.5px;text-align:right}
+  .entry .amt small{display:block;font-weight:400;font-size:10.5px;color:var(--mut)}
+  .pill{display:inline-block;font-size:10px;padding:1px 7px;border-radius:9px;background:#FFF3D6;color:#8A6410;
+        border:1px solid #EAD79E;margin-left:6px;vertical-align:1px}
+  .datehead{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--mut);
+            margin:14px 0 2px;font-weight:700}
+  .empty{color:var(--mut);font-size:13.5px;text-align:center;padding:22px 6px;line-height:1.5}
+
+  /* Forms */
+  label{display:block;font-size:12px;color:var(--mut);margin:12px 0 4px;font-weight:600}
+  input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+    font-size:15px;background:#fff;color:var(--ink);font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--ledger);outline-offset:0;border-color:var(--ledger)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{display:block;width:100%;padding:13px;border:none;border-radius:10px;background:var(--ledger);
+       color:#fff;font-size:15.5px;font-weight:600;margin-top:16px;font-family:inherit}
+  .btn:active{background:var(--ledger-2)}
+  .btn.ghost{background:#fff;color:var(--ledger);border:1.5px solid var(--ledger);margin-top:10px}
+  .btn.danger{background:#fff;color:var(--red);border:1.5px solid #E4C2BD}
+  .mini{background:none;border:none;color:var(--mut);font-size:17px;padding:6px 8px}
+  .addline{display:flex;gap:8px;margin-top:8px}
+  .addline input{flex:1}
+  .addline input.w90{flex:0 0 96px}
+  .addline button{flex:0 0 44px;border:none;border-radius:10px;background:var(--ledger);color:#fff;font-size:20px}
+  .note{font-size:12px;color:var(--mut);line-height:1.5;margin-top:10px}
+
+  /* Tab bar */
+  nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);
+      display:flex;justify-content:space-around;padding:6px 4px calc(8px + env(safe-area-inset-bottom));z-index:20}
+  nav button{background:none;border:none;font-family:inherit;font-size:10.5px;color:var(--mut);
+             display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 10px;font-weight:600}
+  nav button .ic{font-size:19px;line-height:1}
+  nav button.on{color:var(--ledger)}
+  nav button:focus-visible{outline:2px solid var(--ledger);border-radius:8px}
+
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:86px;background:var(--ink);color:#fff;
+         padding:9px 18px;border-radius:20px;font-size:13.5px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:30}
+  .toast.show{opacity:.95}
+  @media (prefers-reduced-motion: reduce){ .toast{transition:none} }
+  .hide{display:none!important}
+
+  /* History screen */
+  .histhead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .histhead .back{background:#fff;border:1px solid var(--line);border-radius:10px;width:38px;height:36px;font-size:18px;color:var(--ink)}
+  .histhead .t{font-weight:700;font-size:16px}
+  .histhead .t small{display:block;font-weight:400;font-size:11.5px;color:var(--mut)}
+  .histtotals{display:flex;gap:10px;margin-bottom:12px}
+  .histtotals .hbox{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .histtotals .hbox small{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;font-weight:700}
+  .histtotals .hbox b{display:block;font-size:17px;margin-top:2px}
+  .mhead{display:flex;justify-content:space-between;font-size:11px;letter-spacing:1px;text-transform:uppercase;
+         color:var(--mut);margin:14px 0 2px;font-weight:700}
+
+  /* Payment voucher (print) */
+  .voucher{display:none}
+  @media print{
+    body>*:not(.voucher){display:none!important}
+    body{background:#fff;padding:0}
+    .voucher{display:block;font-family:Georgia,"Times New Roman",serif;color:#111;padding:26px 30px;max-width:640px;margin:0 auto}
+    .voucher .vh{text-align:center;border-bottom:2.5px solid #111;padding-bottom:10px}
+    .voucher .vh h1{font-size:20px;letter-spacing:3px;margin:0}
+    .voucher .vh .co{font-size:12px;letter-spacing:1px;margin-top:4px}
+    .voucher .vmeta{display:flex;justify-content:space-between;font-size:12.5px;margin:12px 0 16px}
+    .voucher table{width:100%;border-collapse:collapse;font-size:13.5px}
+    .voucher td{border:1px solid #333;padding:8px 10px}
+    .voucher td.l{width:32%;font-weight:bold;background:#f2f2f2}
+    .voucher .amt-big{font-size:17px;font-weight:bold}
+    .voucher .words{font-style:italic}
+    .voucher .sig{display:flex;justify-content:space-between;gap:24px;margin-top:54px;font-size:12px;text-align:center}
+    .voucher .sig div{flex:1;border-top:1px solid #111;padding-top:6px}
+    .voucher .foot{margin-top:26px;font-size:10.5px;color:#555;text-align:center}
+  }
+
+  /* Login / config overlay */
+  .overlay{position:fixed;inset:0;background:var(--paper);z-index:50;overflow:auto;padding:26px 18px calc(30px + env(safe-area-inset-bottom))}
+  .overlay .box{max-width:420px;margin:0 auto}
+  .overlay .logo{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--ledger);font-weight:700;text-align:center;margin-bottom:4px}
+  .overlay h2{font-size:20px;text-align:center;margin-bottom:18px}
+  .errbox{background:#FBEDEA;border:1px solid #E4C2BD;color:var(--red);border-radius:10px;padding:10px 12px;font-size:13px;margin-top:12px}
+  .syncdot{position:absolute;top:14px;right:16px;font-size:10.5px;color:#9DBFB2;letter-spacing:1px;font-weight:600;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<div class="overlay" id="ovConfig" style="display:none"><div class="box">
+  <div class="logo">Expense Pool</div>
+  <h2>Connect to your database</h2>
+  <label for="cfgUrl">Supabase project URL</label>
+  <input id="cfgUrl" type="text" placeholder="https://xxxx.supabase.co">
+  <label for="cfgKey">Anon public key</label>
+  <input id="cfgKey" type="text" placeholder="eyJ...">
+  <button class="btn" onclick="saveCfg()">Save &amp; continue</button>
+  <div class="note">Find both in Supabase &rarr; Project Settings &rarr; API. Saved on this device only; each partner enters it once.</div>
+  <div class="errbox hide" id="cfgErr"></div>
+</div></div>
+
+<div class="overlay" id="ovLogin" style="display:none"><div class="box">
+  <div class="logo">Expense Pool</div>
+  <h2>Partner login</h2>
+  <label for="liEmail">Email</label>
+  <input id="liEmail" type="email" autocomplete="username">
+  <label for="liPass">Password</label>
+  <input id="liPass" type="password" autocomplete="current-password">
+  <button class="btn" onclick="doLogin()">Log in</button>
+  <div class="note">Accounts are created in Supabase &rarr; Authentication &rarr; Users. No self sign-up.</div>
+  <div class="errbox hide" id="liErr"></div>
+</div></div>
+
+<header>
+  <div class="brand">Expense Pool</div><div class="syncdot" id="syncDot"></div>
+  <div class="bal-label" id="balLabel">Balance left this month</div>
+  <div class="bal num" id="balBig">0</div>
+  <div class="sub">
+    <span>Put in<b class="num" id="hIn">0</b></span>
+    <span>Spent<b class="num" id="hOut">0</b></span>
+    <span>All-time balance<b class="num" id="hAll">0</b></span>
+  </div>
+</header>
+<div class="monthbar">
+  <button id="mPrev" aria-label="Previous month">&#8249;</button>
+  <span class="mname" id="mName"></span>
+  <button id="mNext" aria-label="Next month">&#8250;</button>
+</div>
+
+<main id="view"></main>
+
+<nav>
+  <button data-tab="home" class="on"><span class="ic">&#9636;</span>Summary</button>
+  <button data-tab="add"><span class="ic">&#65291;</span>Pay</button>
+  <button data-tab="log"><span class="ic">&#9776;</span>Log</button>
+  <button data-tab="dep"><span class="ic">&#8595;</span>Deposits</button>
+  <button data-tab="setup"><span class="ic">&#9881;</span>Setup</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+<div class="voucher" id="voucher"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+"use strict";
+/* ---------- supabase data layer ---------- */
+var sb = null, ME = "";
+var DB = { partners:["Partner 1","Partner 2","Partner 3","Shared"],
+           cats:[{n:"Partner Salary",b:2100000},{n:"Staff Salary",b:150000},{n:"Apartment Loan",b:1800000},
+                 {n:"Family",b:450000},{n:"Donations",b:150000},{n:"Other",b:0}],
+           exp:[], dep:[] };
+
+function cfgGet(){ try{ return JSON.parse(localStorage.getItem("poolCfg")||"null"); }catch(e){ return null; } }
+function cfgSet(c){ try{ localStorage.setItem("poolCfg", JSON.stringify(c)); }catch(e){} }
+function show(id,on){ document.getElementById(id).style.display = on?"block":"none"; }
+function err(id,msg){ var e=document.getElementById(id); if(msg){e.textContent=msg;e.classList.remove("hide");} else e.classList.add("hide"); }
+function syncMsg(m){ document.getElementById("syncDot").textContent = m||""; }
+
+function saveCfg(){
+  var url=document.getElementById("cfgUrl").value.trim().replace(/\/+$/,"");
+  var key=document.getElementById("cfgKey").value.trim();
+  if(url.indexOf("https://")!==0 || url.indexOf(".supabase.co")<0){ err("cfgErr","That does not look like a Supabase URL. It should look like https://xxxx.supabase.co"); return; }
+  if(key.length<20){ err("cfgErr","Paste the full anon public key."); return; }
+  cfgSet({url:url,key:key}); location.reload();
+}
+
+function doLogin(){
+  err("liErr","");
+  sb.auth.signInWithPassword({
+    email: document.getElementById("liEmail").value.trim(),
+    password: document.getElementById("liPass").value
+  }).then(function(r){
+    if(r.error){ err("liErr","Login failed: "+r.error.message); return; }
+    boot();
+  });
+}
+function doLogout(){
+  if(!confirm("Log out of this device?")) return;
+  sb.auth.signOut().then(function(){ location.reload(); });
+}
+
+function rowToExp(r){ return {id:r.id,date:r.date,who:r.who,cat:r.cat,desc:r.details,amt:Number(r.amt),via:r.via,st:r.st,note:r.note||"",by:r.created_by||""}; }
+function fetchAll(){
+  syncMsg("syncing");
+  return Promise.all([
+    sb.from("settings").select("*").eq("id",1).maybeSingle(),
+    sb.from("expenses").select("*"),
+    sb.from("deposits").select("*")
+  ]).then(function(res){
+    var s=res[0], e=res[1], d=res[2];
+    if(s.error||e.error||d.error) throw (s.error||e.error||d.error);
+    if(s.data){ DB.partners=s.data.partners; DB.cats=s.data.cats; }
+    else { sb.from("settings").insert({id:1,partners:DB.partners,cats:DB.cats}).then(function(){}); }
+    DB.exp = (e.data||[]).map(rowToExp);
+    DB.dep = (d.data||[]).map(function(r){ return {id:r.id,date:r.date,amt:Number(r.amt),note:r.note||"",by:r.created_by||""}; });
+    syncMsg("");
+  }).catch(function(ex){ syncMsg("offline"); toast("Could not load latest data - check internet"); });
+}
+var lastSync = 0;
+function maybeSync(){
+  if(Date.now()-lastSync < 8000) return;
+  lastSync = Date.now();
+  fetchAll().then(function(){ render(); });
+}
+function saveSettings(){
+  return sb.from("settings").upsert({id:1,partners:DB.partners,cats:DB.cats,updated_at:new Date().toISOString()})
+    .then(function(r){ if(r.error){ toast("Could not save - check internet"); throw r.error; } });
+}
+
+function boot(){
+  show("ovLogin",false); show("ovConfig",false);
+  sb.auth.getUser().then(function(u){
+    ME = (u.data && u.data.user && u.data.user.email) || "";
+    fetchAll().then(function(){ go("home"); });
+  });
+}
+
+function initApp(){
+  var cfg = cfgGet();
+  if(!cfg){ show("ovConfig",true); return; }
+  try { sb = supabase.createClient(cfg.url, cfg.key); }
+  catch(e){ show("ovConfig",true); err("cfgErr","Could not connect with saved details."); return; }
+  sb.auth.getSession().then(function(r){
+    if(r.data && r.data.session) boot();
+    else show("ovLogin",true);
+  });
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden && ME) maybeSync(); });
+}
+
+var now = new Date();
+var curY = now.getFullYear(), curM = now.getMonth(); // viewed month
+var tab = "home";
+var editId = null;
+
+/* ---------- helpers ---------- */
+function fmt(n){ n = Math.round(n||0); return n.toLocaleString("en-US"); }
+function mkey(y,m){ return y + "-" + String(m+1).padStart(2,"0"); }
+function curKey(){ return mkey(curY,curM); }
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function monthName(y,m){ return ["January","February","March","April","May","June","July","August","September","October","November","December"][m]+" "+y; }
+function inMonth(dateStr){ return (dateStr||"").slice(0,7) === curKey(); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];}); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function toast(msg){ var t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove("show");},1800); }
+
+function sums(){
+  var inM=0, outM=0, allIn=0, allOut=0, pend=0;
+  DB.dep.forEach(function(d){ allIn+=d.amt; if(inMonth(d.date)) inM+=d.amt; });
+  DB.exp.forEach(function(e){ allOut+=e.amt; if(inMonth(e.date)){ outM+=e.amt; if(e.st==="Pending") pend+=e.amt; } });
+  return {inM:inM,outM:outM,balM:inM-outM,all:allIn-allOut,pend:pend};
+}
+
+/* ---------- header ---------- */
+function drawHeader(){
+  var s = sums();
+  var b = document.getElementById("balBig");
+  b.textContent = fmt(s.balM);
+  b.className = "bal num" + (s.balM<0?" neg":"");
+  document.getElementById("hIn").textContent  = fmt(s.inM);
+  document.getElementById("hOut").textContent = fmt(s.outM);
+  document.getElementById("hAll").textContent = fmt(s.all);
+  document.getElementById("mName").textContent = monthName(curY,curM);
+}
+
+/* ---------- views ---------- */
+function vHome(){
+  var s = sums();
+  var h = '<div class="card"><h3>Category — spent vs budget</h3>';
+  var any=false;
+  DB.cats.forEach(function(c,ci){
+    var sp=0; DB.exp.forEach(function(e){ if(inMonth(e.date)&&e.cat===c.n) sp+=e.amt; });
+    if(sp===0 && !c.b) return; any=true;
+    var pct = c.b>0 ? Math.min(100, sp/c.b*100) : (sp>0?100:0);
+    var rem = c.b - sp;
+    h+='<div class="catrow" onclick="openHist(\'cat\','+ci+')"><div class="top"><span>'+esc(c.n)+'</span><span class="spent num">'+fmt(sp)+'</span></div>';
+    if(c.b>0){
+      h+='<div class="bar"><i class="'+(sp>c.b?"over":"")+'" style="width:'+pct+'%"></i></div>'+
+         '<div class="meta"><span>Budget '+fmt(c.b)+'</span><span class="'+(rem<0?"neg-txt":"")+' num">'+
+         (rem<0? "Over by "+fmt(-rem) : fmt(rem)+" left")+'</span></div>';
+    } else {
+      h+='<div class="meta"><span>No budget — tracked only</span><span></span></div>';
+    }
+    h+='</div>';
+  });
+  if(!any) h+='<div class="empty">No activity this month yet.<br>Use <b>Pay</b> to log the first payment.</div>';
+  h+='</div>';
+
+  /* ---- Month performance ---- */
+  var pm = curM===0 ? {y:curY-1,m:11} : {y:curY,m:curM-1};
+  var prevKey = mkey(pm.y,pm.m);
+  var nowSpent=0, prevSpent=0, byCatNow={}, byCatPrev={}, unbudget=0, unbudTop=null;
+  DB.exp.forEach(function(e){
+    var k=e.date.slice(0,7);
+    if(k===curKey()){ nowSpent+=e.amt; byCatNow[e.cat]=(byCatNow[e.cat]||0)+e.amt; }
+    if(k===prevKey){ prevSpent+=e.amt; byCatPrev[e.cat]=(byCatPrev[e.cat]||0)+e.amt; }
+  });
+  var ins=[];
+  if(nowSpent>0){
+    // biggest cost
+    var topC=null; Object.keys(byCatNow).forEach(function(c){ if(!topC||byCatNow[c]>byCatNow[topC]) topC=c; });
+    if(topC) ins.push({t:"<b>"+esc(topC)+"</b> is your biggest cost this month — "+fmt(byCatNow[topC])+" ("+Math.round(byCatNow[topC]/nowSpent*100)+"% of all spending).", k:""});
+    // vs last month
+    if(prevSpent>0){
+      var diff=nowSpent-prevSpent, pc=Math.round(Math.abs(diff)/prevSpent*100);
+      if(diff>0) ins.push({t:"Spending is <b>up "+fmt(diff)+"</b> ("+pc+"%) compared to "+monthName(pm.y,pm.m)+".", k: pc>=15?"warn":""});
+      else if(diff<0) ins.push({t:"Spending is <b>down "+fmt(-diff)+"</b> ("+pc+"%) compared to "+monthName(pm.y,pm.m)+" — good control.", k:"good"});
+      else ins.push({t:"Spending is exactly the same as "+monthName(pm.y,pm.m)+".", k:""});
+      // fastest growing category
+      var gc=null, gd=0;
+      DB.cats.forEach(function(c){
+        var d=(byCatNow[c.n]||0)-(byCatPrev[c.n]||0);
+        if(d>gd){ gd=d; gc=c.n; }
+      });
+      if(gc && gd>0 && gc!==topC) ins.push({t:"<b>"+esc(gc)+"</b> grew the most vs last month: +"+fmt(gd)+". Worth checking why.", k:"warn"});
+    }
+    // over budget categories
+    DB.cats.forEach(function(c){
+      if(c.b>0){
+        var sp=byCatNow[c.n]||0;
+        if(sp>c.b) ins.push({t:"<b>"+esc(c.n)+"</b> is over budget by "+fmt(sp-c.b)+". Balance it before month-end or count it against next month.", k:"warn"});
+      }
+    });
+    // unbudgeted spending
+    DB.cats.forEach(function(c){
+      if(!c.b){ var sp=byCatNow[c.n]||0; unbudget+=sp; if(sp>0&&(!unbudTop||sp>(byCatNow[unbudTop]||0))) unbudTop=c.n; }
+    });
+    if(unbudget>0 && nowSpent>0 && unbudget/nowSpent>=0.05)
+      ins.push({t:"Spending with no budget is "+fmt(unbudget)+" ("+Math.round(unbudget/nowSpent*100)+"% of the month). Consider giving <b>"+esc(unbudTop)+"</b> its own budget in Setup.", k:"warn"});
+    // spent more than put in
+    if(s.inM>0 && nowSpent>s.inM)
+      ins.push({t:"You have spent <b>more than was put in</b> this month ("+fmt(nowSpent-s.inM)+" extra). The pool is eating last month's leftover.", k:"warn"});
+    else if(s.inM>0 && s.balM>0)
+      ins.push({t:fmt(s.balM)+" is still unspent — if the month ends like this, it stays in the pool as reserve.", k:"good"});
+    if(s.pend>0)
+      ins.push({t:fmt(s.pend)+" is approved but not paid yet. Print the voucher, sign, pay, then mark it Paid.", k:""});
+  }
+  if(ins.length){
+    h+='<div class="card"><h3>Month performance — what to look at</h3>';
+    ins.forEach(function(x){ h+='<div class="insight '+x.k+'"><span class="dot"></span><span>'+x.t+'</span></div>'; });
+    h+='</div>';
+  }
+
+  h+='<div class="card"><h3>Paid to each partner — '+monthName(curY,curM)+'</h3>';
+  var shown=false;
+  DB.partners.forEach(function(p,pi){
+    if(p==="Shared") return;
+    var t=0; DB.exp.forEach(function(e){ if(inMonth(e.date)&&e.who===p) t+=e.amt; });
+    shown=true;
+    h+='<div class="prow" onclick="openHist(\'who\','+pi+')"><span>'+esc(p)+'</span><b class="num">'+fmt(t)+'</b></div>';
+  });
+  var sh=0; DB.exp.forEach(function(e){ if(inMonth(e.date)&&e.who==="Shared") sh+=e.amt; });
+  h+='<div class="prow" onclick="openHist(\'who\','+DB.partners.indexOf("Shared")+')"><span>Shared costs</span><b class="num">'+fmt(sh)+'</b></div>';
+  if(s.pend>0) h+='<div class="prow"><span>Approved, not yet paid</span><b class="num neg-txt">'+fmt(s.pend)+'</b></div>';
+  h+='</div>';
+  return h;
+}
+
+function selOpts(list, sel){
+  return list.map(function(x){ return '<option'+(x===sel?" selected":"")+'>'+esc(x)+'</option>'; }).join("");
+}
+
+function vAdd(){
+  var e = editId ? DB.exp.find(function(x){return x.id===editId;}) : null;
+  var cats = DB.cats.map(function(c){return c.n;});
+  return '<div class="card"><h3>'+(e?"Edit payment":"Pay an expense")+'</h3>'+
+  '<label for="fDate">Date</label><input id="fDate" type="date" value="'+(e?e.date:todayStr())+'">'+
+  '<div class="grid2"><div>'+
+  '<label for="fWho">Requested by</label><select id="fWho">'+selOpts(DB.partners, e?e.who:"Shared")+'</select>'+
+  '</div><div>'+
+  '<label for="fCat">Category</label><select id="fCat">'+selOpts(cats, e?e.cat:cats[0])+'</select>'+
+  '</div></div>'+
+  '<label for="fDesc">Expense name / description</label><input id="fDesc" type="text" placeholder="e.g. August loan installment" value="'+(e?esc(e.desc):"")+'">'+
+  '<label for="fAmt">Amount</label><input id="fAmt" type="number" inputmode="numeric" placeholder="0" value="'+(e?e.amt:"")+'">'+
+  '<div class="grid2"><div>'+
+  '<label for="fVia">Paid via</label><select id="fVia">'+selOpts(["Cash","Bank Transfer","Cheque"], e?e.via:"Cash")+'</select>'+
+  '</div><div>'+
+  '<label for="fSt">Status</label><select id="fSt">'+selOpts(["Paid","Pending"], e?e.st:"Paid")+'</select>'+
+  '</div></div>'+
+  '<label for="fNote">Notes (optional)</label><input id="fNote" type="text" value="'+(e?esc(e.note):"")+'">'+
+  '<button class="btn" onclick="saveExp()">'+(e?"Save changes":"Save payment")+'</button>'+
+  (e?'<button class="btn ghost" onclick="printVoucher(\''+e.id+'\')">Print approval voucher</button>':"")+
+  (e?'<button class="btn danger" onclick="delExp(\''+e.id+'\')">Delete this payment</button>':"")+
+  '</div>';
+}
+
+function saveExp(){
+  var amt = Number(document.getElementById("fAmt").value);
+  var desc = document.getElementById("fDesc").value.trim();
+  var date = document.getElementById("fDate").value;
+  if(!date){ toast("Pick a date"); return; }
+  if(!desc){ toast("Type the expense name"); return; }
+  if(!(amt>0)){ toast("Enter an amount above 0"); return; }
+  var payload = {
+    date:date,
+    who: document.getElementById("fWho").value,
+    cat: document.getElementById("fCat").value,
+    details: desc, amt: amt,
+    via: document.getElementById("fVia").value,
+    st:  document.getElementById("fSt").value,
+    note: document.getElementById("fNote").value.trim()
+  };
+  var q = editId
+    ? sb.from("expenses").update(payload).eq("id",editId).select().single()
+    : sb.from("expenses").insert(Object.assign({created_by:ME},payload)).select().single();
+  q.then(function(r){
+    if(r.error){ toast("Could not save - check internet"); return; }
+    var rec = rowToExp(r.data);
+    if(editId){ var i=DB.exp.findIndex(function(x){return x.id===editId;}); DB.exp[i]=rec; toast("Payment updated"); }
+    else { DB.exp.push(rec); toast("Payment saved"); }
+    editId=null;
+    curY = Number(date.slice(0,4)); curM = Number(date.slice(5,7))-1;
+    go("log");
+  });
+}
+function delExp(id){
+  if(!confirm("Delete this payment?")) return;
+  sb.from("expenses").delete().eq("id",id).then(function(r){
+    if(r.error){ toast("Could not delete - check internet"); return; }
+    DB.exp = DB.exp.filter(function(x){return x.id!==id;});
+    editId=null; toast("Deleted"); go("log");
+  });
+}
+function editExp(id){ editId=id; go("add"); }
+
+function vLog(){
+  var rows = DB.exp.filter(function(e){return inMonth(e.date);})
+                   .sort(function(a,b){ return b.date<a.date?-1:b.date>a.date?1:0; });
+  if(!rows.length) return '<div class="card"><div class="empty">No payments logged in '+monthName(curY,curM)+'.<br>Every payment gets one entry — tap <b>Pay</b>.</div></div>';
+  var h='<div class="card">', lastDate="";
+  rows.forEach(function(e){
+    if(e.date!==lastDate){ h+='<div class="datehead num">'+esc(e.date)+'</div>'; lastDate=e.date; }
+    h+='<div class="entry" onclick="editExp(\''+e.id+'\')">'+
+       '<div class="mid"><div class="desc">'+esc(e.desc)+(e.st==="Pending"?'<span class="pill">Pending</span>':"")+'</div>'+
+       '<div class="tag">'+esc(e.cat)+' &middot; '+esc(e.who)+' &middot; '+esc(e.via)+(e.by?' &middot; by '+esc(e.by.split("@")[0]):'')+'</div></div>'+
+       '<div class="amt num">'+fmt(e.amt)+'<small>tap to edit</small></div></div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+function vDep(){
+  var h='<div class="card"><h3>Put money into the pool</h3>'+
+  '<label for="dDate">Date</label><input id="dDate" type="date" value="'+todayStr()+'">'+
+  '<label for="dAmt">Amount put in</label><input id="dAmt" type="number" inputmode="numeric" placeholder="0">'+
+  '<label for="dNote">Note (optional)</label><input id="dNote" type="text" placeholder="e.g. monthly pool transfer">'+
+  '<button class="btn" onclick="saveDep()">Add deposit</button></div>';
+
+  var rows = DB.dep.filter(function(d){return inMonth(d.date);})
+                   .sort(function(a,b){ return b.date<a.date?-1:1; });
+  h+='<div class="card"><h3>Deposits — '+monthName(curY,curM)+'</h3>';
+  if(!rows.length) h+='<div class="empty">No deposits this month yet.</div>';
+  rows.forEach(function(d){
+    h+='<div class="entry"><div class="mid"><div class="desc num">'+esc(d.date)+'</div>'+
+       '<div class="tag">'+esc(d.note||"Pool deposit")+'</div></div>'+
+       '<div class="amt num" style="color:var(--ok)">+'+fmt(d.amt)+'</div>'+
+       '<button class="mini" aria-label="Delete deposit" onclick="delDep(\''+d.id+'\')">&#10005;</button></div>';
+  });
+  h+='</div>';
+  return h;
+}
+function saveDep(){
+  var amt=Number(document.getElementById("dAmt").value);
+  var date=document.getElementById("dDate").value;
+  if(!date){ toast("Pick a date"); return; }
+  if(!(amt>0)){ toast("Enter an amount above 0"); return; }
+  sb.from("deposits").insert({date:date,amt:amt,note:document.getElementById("dNote").value.trim(),created_by:ME})
+    .select().single().then(function(r){
+    if(r.error){ toast("Could not save - check internet"); return; }
+    DB.dep.push({id:r.data.id,date:r.data.date,amt:Number(r.data.amt),note:r.data.note||"",by:r.data.created_by||""});
+    toast("Deposit added");
+    curY=Number(date.slice(0,4)); curM=Number(date.slice(5,7))-1;
+    go("dep");
+  });
+}
+function delDep(id){
+  event.stopPropagation();
+  if(!confirm("Delete this deposit?")) return;
+  sb.from("deposits").delete().eq("id",id).then(function(r){
+    if(r.error){ toast("Could not delete - check internet"); return; }
+    DB.dep=DB.dep.filter(function(x){return x.id!==id;}); go("dep");
+  });
+}
+
+var editCatIdx = null, editPartIdx = null;
+
+function vSetup(){
+  var h='<div class="card"><h3>Partners</h3>';
+  DB.partners.forEach(function(p,i){
+    if(editPartIdx===i){
+      h+='<div class="catrow"><label for="epName">Partner name</label>'+
+         '<input id="epName" type="text" value="'+esc(p)+'">'+
+         '<div class="grid2" style="margin-top:10px">'+
+         '<button class="btn" style="margin-top:0" onclick="savePart('+i+')">Save</button>'+
+         '<button class="btn ghost" style="margin-top:0" onclick="editPartIdx=null;go(\'setup\')">Cancel</button></div>'+
+         '<button class="btn danger" onclick="delP('+i+')">Remove partner</button></div>';
+    } else {
+      h+='<div class="entry" onclick="openHist(\'who\','+i+')">'+
+         '<div class="mid"><div class="desc">'+esc(p)+'</div>'+
+         '<div class="tag">'+(p==="Shared"?"for shared costs — tap for history":"tap for history & edit")+'</div></div>'+
+         (p==="Shared"?"":'<button class="mini" aria-label="Delete partner" onclick="event.stopPropagation();delP('+i+')">&#10005;</button>')+'</div>';
+    }
+  });
+  h+='<div class="addline"><input id="npName" type="text" placeholder="New partner name">'+
+     '<button aria-label="Add partner" onclick="addP()">&#65291;</button></div></div>';
+
+  h+='<div class="card"><h3>Categories &amp; budgets</h3>';
+  DB.cats.forEach(function(c,i){
+    if(editCatIdx===i){
+      h+='<div class="catrow"><label for="ecName">Category name</label>'+
+         '<input id="ecName" type="text" value="'+esc(c.n)+'">'+
+         '<label for="ecBud">Monthly budget (leave 0 for no budget)</label>'+
+         '<input id="ecBud" type="number" inputmode="numeric" value="'+(c.b||0)+'">'+
+         '<div class="grid2" style="margin-top:10px">'+
+         '<button class="btn" style="margin-top:0" onclick="saveCat('+i+')">Save</button>'+
+         '<button class="btn ghost" style="margin-top:0" onclick="editCatIdx=null;go(\'setup\')">Cancel</button></div>'+
+         '<button class="btn danger" onclick="delC('+i+')">Remove category</button></div>';
+    } else {
+      h+='<div class="entry" onclick="openHist(\'cat\','+i+')">'+
+         '<div class="mid"><div class="desc">'+esc(c.n)+'</div>'+
+         '<div class="tag num">'+(c.b>0?("Budget "+fmt(c.b)):"No budget — tracked only")+'</div></div>'+
+         '<div class="amt" style="color:var(--mut);font-weight:400;font-size:12px">tap for history</div>'+
+         '<button class="mini" aria-label="Delete category" onclick="event.stopPropagation();delC('+i+')">&#10005;</button></div>';
+    }
+  });
+  h+='<div class="addline"><input id="ncName" type="text" placeholder="New category">'+
+     '<input id="ncBud" class="w90" type="number" inputmode="numeric" placeholder="Budget">'+
+     '<button aria-label="Add category" onclick="addC()">&#65291;</button></div>'+
+     '<div class="note">Tap any category to change its name or budget. Budget is optional — categories without one are tracked only, and the Summary shows "-" instead of a limit.</div></div>';
+
+  h+='<div class="card"><h3>Account</h3>'+
+     '<div class="note" style="margin-top:0">Logged in as <b>'+esc(ME)+'</b>. Everyone sees the same live data.</div>'+
+     '<button class="btn ghost" onclick="doExport()">Download backup copy</button>'+
+     '<button class="btn danger" onclick="doLogout()">Log out</button>'+
+     '<div class="note">Data lives in your Supabase database - backups are optional now, but a monthly copy never hurts.</div></div>';
+  return h;
+}
+function addP(){ var v=document.getElementById("npName").value.trim(); if(!v){toast("Type a name");return;}
+  if(DB.partners.indexOf(v)>=0){toast("Already exists");return;}
+  DB.partners.splice(DB.partners.length-1,0,v); saveSettings().then(function(){ toast("Partner added"); go("setup"); }).catch(function(){}); }
+function savePart(i){
+  var v=document.getElementById("epName").value.trim();
+  if(!v){toast("Type a name");return;}
+  if(DB.partners.indexOf(v)>=0 && DB.partners[i]!==v){toast("Already exists");return;}
+  var old=DB.partners[i]; DB.partners[i]=v;
+  DB.exp.forEach(function(e){ if(e.who===old) e.who=v; });
+  sb.from("expenses").update({who:v}).eq("who",old).then(function(){});
+  editPartIdx=null; saveSettings().then(function(){ toast("Saved"); go("setup"); }).catch(function(){}); }
+function delP(i){ var p=DB.partners[i];
+  var used=DB.exp.some(function(e){return e.who===p;});
+  if(used){ toast("Has payments — rename instead"); return; }
+  if(!confirm("Remove "+p+"?")) return;
+  DB.partners.splice(i,1); editPartIdx=null; saveSettings().then(function(){ go("setup"); }).catch(function(){}); }
+function addC(){ var v=document.getElementById("ncName").value.trim(); if(!v){toast("Type a category");return;}
+  if(DB.cats.some(function(c){return c.n===v;})){toast("Already exists");return;}
+  var b=Number(document.getElementById("ncBud").value)||0;
+  DB.cats.push({n:v,b:b}); saveSettings().then(function(){ toast("Category added"); go("setup"); }).catch(function(){}); }
+function saveCat(i){
+  var v=document.getElementById("ecName").value.trim();
+  if(!v){toast("Type a name");return;}
+  if(DB.cats.some(function(c,j){return c.n===v && j!==i;})){toast("Already exists");return;}
+  var old=DB.cats[i].n;
+  DB.cats[i].n=v;
+  DB.cats[i].b=Math.max(0, Number(document.getElementById("ecBud").value)||0);
+  DB.exp.forEach(function(e){ if(e.cat===old) e.cat=v; });
+  sb.from("expenses").update({cat:v}).eq("cat",old).then(function(){});
+  editCatIdx=null; saveSettings().then(function(){ toast("Saved"); go("setup"); }).catch(function(){}); }
+function delC(i){ var c=DB.cats[i];
+  var used=DB.exp.some(function(e){return e.cat===c.n;});
+  if(used){ toast("Has payments — rename instead"); return; }
+  if(!confirm("Remove "+c.n+"?")) return;
+  DB.cats.splice(i,1); editCatIdx=null; saveSettings().then(function(){ go("setup"); }).catch(function(){}); }
+
+function doExport(){
+  var blob=new Blob([JSON.stringify(DB,null,1)],{type:"application/json"});
+  var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="expense-pool-backup-"+todayStr()+".json"; a.click();
+  URL.revokeObjectURL(a.href); toast("Backup downloaded");
+}
+/* ---------- history ---------- */
+var histType=null, histIdx=null, histBack="setup";
+function openHist(type,i){ histBack = (tab==="hist") ? histBack : tab; histType=type; histIdx=i; go("hist"); }
+function vHist(){
+  var name = histType==="who" ? DB.partners[histIdx] : DB.cats[histIdx].n;
+  var rows = DB.exp.filter(function(e){ return histType==="who" ? e.who===name : e.cat===name; })
+                   .sort(function(a,b){ return a.date<b.date?1:-1; });
+  var all=0, thisM=0;
+  rows.forEach(function(e){ all+=e.amt; if(inMonth(e.date)) thisM+=e.amt; });
+
+  var h='<div class="histhead">'+
+    '<button class="back" aria-label="Back" onclick="go(histBack)">&#8249;</button>'+
+    '<div class="t">'+esc(name)+'<small>'+(histType==="who"?"partner history":"category history")+' &middot; '+rows.length+' payment'+(rows.length===1?"":"s")+'</small></div></div>';
+
+  h+='<div class="histtotals">'+
+     '<div class="hbox"><small>'+monthName(curY,curM)+'</small><b class="num">'+fmt(thisM)+'</b></div>'+
+     '<div class="hbox"><small>All time</small><b class="num">'+fmt(all)+'</b></div></div>';
+
+  var canEdit = !(histType==="who" && name==="Shared");
+  if(canEdit){
+    h+='<button class="btn ghost" style="margin:0 0 12px" onclick="'+
+       (histType==="who"?("editPartIdx="+histIdx+";editCatIdx=null"):("editCatIdx="+histIdx+";editPartIdx=null"))+
+       ';go(\'setup\')">Edit name'+(histType==="cat"?" / budget":"")+'</button>';
+  }
+
+  if(!rows.length){
+    h+='<div class="card"><div class="empty">No payments yet for '+esc(name)+'.</div></div>';
+    return h;
+  }
+  h+='<div class="card">';
+  var lastMonth="";
+  rows.forEach(function(e){
+    var mk=e.date.slice(0,7);
+    if(mk!==lastMonth){
+      var mt=0; rows.forEach(function(x){ if(x.date.slice(0,7)===mk) mt+=x.amt; });
+      var y=Number(mk.slice(0,4)), m=Number(mk.slice(5,7))-1;
+      h+='<div class="mhead"><span>'+monthName(y,m)+'</span><span class="num">'+fmt(mt)+'</span></div>';
+      lastMonth=mk;
+    }
+    h+='<div class="entry" onclick="editExp(\''+e.id+'\')">'+
+       '<div class="mid"><div class="desc">'+esc(e.desc)+(e.st==="Pending"?'<span class="pill">Pending</span>':"")+'</div>'+
+       '<div class="tag num">'+esc(e.date)+' &middot; '+esc(histType==="who"?e.cat:e.who)+' &middot; '+esc(e.via)+'</div></div>'+
+       '<div class="amt num">'+fmt(e.amt)+'<small>tap to open</small></div></div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+/* ---------- payment voucher ---------- */
+function numWords(n){
+  n = Math.round(Math.abs(n||0));
+  if(n===0) return "Zero";
+  var ones=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+  var tens=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+  function under1000(x){
+    var s="";
+    if(x>=100){ s+=ones[Math.floor(x/100)]+" Hundred"; x%=100; if(x) s+=" "; }
+    if(x>=20){ s+=tens[Math.floor(x/10)]; x%=10; if(x) s+=" "+ones[x]; }
+    else if(x>0) s+=ones[x];
+    return s;
+  }
+  var parts=[], units=[[1000000000,"Billion"],[1000000,"Million"],[1000,"Thousand"],[1,""]];
+  units.forEach(function(u){
+    if(n>=u[0]){ var q=Math.floor(n/u[0]); n%=u[0];
+      parts.push(under1000(q)+(u[1]?" "+u[1]:"")); }
+  });
+  return parts.join(" ");
+}
+function printVoucher(id){
+  var e = DB.exp.find(function(x){return x.id===id;});
+  if(!e) return;
+  var vno = "PV-" + e.date.replace(/-/g,"") + "-" + e.id.slice(-4).toUpperCase();
+  var v = document.getElementById("voucher");
+  v.innerHTML =
+    '<div class="vh"><h1>PAYMENT VOUCHER</h1><div class="co">Partnership Expense Pool</div></div>'+
+    '<div class="vmeta"><span>Voucher No: <b>'+esc(vno)+'</b></span><span>Date: <b class="num">'+esc(e.date)+'</b></span></div>'+
+    '<table>'+
+    '<tr><td class="l">Requested by</td><td>'+esc(e.who)+'</td></tr>'+
+    '<tr><td class="l">Category</td><td>'+esc(e.cat)+'</td></tr>'+
+    '<tr><td class="l">Being payment of</td><td>'+esc(e.desc)+(e.note?'<br><span style="font-size:11.5px;color:#555">'+esc(e.note)+'</span>':"")+'</td></tr>'+
+    '<tr><td class="l">Paid via</td><td>'+esc(e.via)+'</td></tr>'+
+    '<tr><td class="l">Amount</td><td class="amt-big num">'+fmt(e.amt)+'</td></tr>'+
+    '<tr><td class="l">Amount in words</td><td class="words">'+numWords(e.amt)+' Only</td></tr>'+
+    '</table>'+
+    '<div class="sig"><div>Requested by</div><div>Approved by</div><div>Received by</div></div>'+
+    '<div class="foot">Prepared from the Expense Pool app &middot; '+esc(todayStr())+'</div>';
+  window.print();
+}
+
+/* ---------- nav ---------- */
+function go(t){
+  tab=t;
+  if(t!=="add") editId=null;
+  if(t!=="setup" && t!=="hist"){ editCatIdx=null; editPartIdx=null; }
+  if(t!=="hist"){ histType=null; histIdx=null; }
+  var navTab = (t==="hist") ? "setup" : t;
+  document.querySelectorAll("nav button").forEach(function(b){ b.classList.toggle("on", b.dataset.tab===navTab); });
+  var v={home:vHome,add:vAdd,log:vLog,dep:vDep,setup:vSetup,hist:vHist}[t]();
+  document.getElementById("view").innerHTML=v;
+  drawHeader();
+  window.scrollTo(0,0);
+}
+function render(){ go(tab); }
+document.querySelectorAll("nav button").forEach(function(b){
+  b.addEventListener("click",function(){ go(b.dataset.tab); if(ME) maybeSync(); });
+});
+document.getElementById("mPrev").addEventListener("click",function(){ curM--; if(curM<0){curM=11;curY--;} go(tab); });
+document.getElementById("mNext").addEventListener("click",function(){ curM++; if(curM>11){curM=0;curY++;} go(tab); });
+
+initApp();
+</script>
+</body>
+</html>
